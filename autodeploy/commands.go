@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const defaultServiceName = "autodeploy-renew"
+const defaultServiceName = "deploy_site-renew"
 
 func CmdInit(cfgPath string) error {
 	cfgPath = ResolveConfigPath(cfgPath)
@@ -35,7 +35,7 @@ func CmdInit(cfgPath string) error {
 		ClientMaxBodySize:            "10m",
 		ForceSSLRedirect:             true,
 		ExtraNginxDirectives:         "",
-		LogFile:                      "auto_deploy.log",
+		LogFile:                      "deploy_site.log",
 	}
 	if err := writeConfig(cfgPath, cf); err != nil {
 		return err
@@ -49,8 +49,8 @@ func CmdInit(cfgPath string) error {
 	fmt.Println("  3. Set your Cloudflare API token (zone:DNS:edit permission):")
 	fmt.Println("       echo 'CLOUDFLARE_API_TOKEN=xxxx' >> .env")
 	fmt.Println("       echo '.env' >> .gitignore")
-	fmt.Println("  4. autodeploy dry-run")
-	fmt.Println("  5. autodeploy deploy")
+	fmt.Println("  4. deploy_site dry-run")
+	fmt.Println("  5. deploy_site deploy")
 	return nil
 }
 
@@ -109,13 +109,13 @@ func CmdDryRun(cfgPath string) error {
 	if CertExists(cfg.Domain) {
 		fmt.Printf("  cert     : already issued (%s)\n", LiveCertPath(cfg.Domain))
 	} else {
-		fmt.Printf("  cert     : not issued yet — 'autodeploy deploy' will request one\n")
+		fmt.Printf("  cert     : not issued yet — 'deploy_site deploy' will request one\n")
 	}
 
 	if failed {
-		return fmt.Errorf("dry-run found problems — fix them before running 'autodeploy deploy'")
+		return fmt.Errorf("dry-run found problems — fix them before running 'deploy_site deploy'")
 	}
-	fmt.Println("=== dry-run passed — ready to run 'autodeploy deploy' ===")
+	fmt.Println("=== dry-run passed — ready to run 'deploy_site deploy' ===")
 	return nil
 }
 
@@ -179,7 +179,7 @@ func CmdDeploy(cfgPath string) error {
 		}
 		l.ok("certificate issued")
 	} else {
-		l.info("certificate already exists — skipping issuance (use 'autodeploy renew' to renew)")
+		l.info("certificate already exists — skipping issuance (use 'deploy_site renew' to renew)")
 	}
 
 	l.info("installing final nginx site (TLS termination)")
@@ -334,7 +334,7 @@ func runCommand(name string, args ...string) (string, error) {
 
 func ServiceUnitContent(execPath, cfgPath string) string {
 	return fmt.Sprintf(`[Unit]
-Description=autodeploy certificate renewal
+Description=deploy_site certificate renewal
 
 [Service]
 Type=oneshot
@@ -344,7 +344,7 @@ ExecStart=%q renew %q
 
 func TimerUnitContent() string {
 	return `[Unit]
-Description=Run autodeploy certificate renewal twice a day
+Description=Run deploy_site certificate renewal twice a day
 
 [Timer]
 OnCalendar=*-*-* 03,15:00:00
@@ -356,13 +356,13 @@ WantedBy=timers.target
 `
 }
 
-// CmdService manages a systemd timer that periodically runs 'autodeploy renew'.
+// CmdService manages a systemd timer that periodically runs 'deploy_site renew'.
 func CmdService(args []string) error {
 	if runtime.GOOS != "linux" {
 		return fmt.Errorf("service command is only available on Linux")
 	}
 	if len(args) == 0 {
-		return fmt.Errorf("usage: autodeploy service <install|uninstall|start|stop|restart|status|logs> [config|lines]")
+		return fmt.Errorf("usage: deploy_site service <install|uninstall|start|stop|restart|status|logs> [config|lines]")
 	}
 
 	action := args[0]

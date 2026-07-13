@@ -1,0 +1,17 @@
+{
+  "domain": "app.example.com",
+  "upstream_host": "127.0.0.1",
+  "upstream_port": 8080,
+  "compose_file": "docker-compose.yml",
+  "compose_workdir": "",
+  "compose_service": "",
+  "certbot_email": "you@example.com",
+  "challenge_method": "dns-cloudflare",
+  "cloudflare_propagation_seconds": 30,
+  "nginx_sites_available": "/etc/nginx/sites-available",
+  "nginx_sites_enabled": "/etc/nginx/sites-enabled",
+  "client_max_body_size": "10m",
+  "force_ssl_redirect": true,
+  "extra_nginx_directives": "",
+  "log_file": "deploy_site.log"
+}

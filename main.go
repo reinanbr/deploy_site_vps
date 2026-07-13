@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/reinanbr/auto_deploy_go/autodeploy"
+	"github.com/reinanbr/deploy_site/autodeploy"
 )
 
 var version = "v0.1.0"
 
-const usage = `Usage: autodeploy <command> [config_path]
+const usage = `Usage: deploy_site <command> [config_path]
 
 Commands:
-  init             create config_auto_deploy.json for the current project
+  init             create config_deploy_site.json for the current project
   dry-run          validate config, tooling and DNS without changing anything
   deploy           docker compose up, generate nginx vhost, obtain TLS cert via certbot
   renew            run certbot renew and reload nginx (meant for cron/systemd timer)
@@ -24,7 +24,7 @@ Commands:
 Cloudflare token (required for the default dns-cloudflare challenge):
   Set CLOUDFLARE_API_TOKEN in environment or in .env next to the config
   (zone:DNS:edit permission scoped to the domain's zone).
-  Never put the token in config_auto_deploy.json.
+  Never put the token in config_deploy_site.json.
 `
 
 func main() {
@@ -37,7 +37,7 @@ func main() {
 
 	switch args[0] {
 	case "--version", "-v":
-		fmt.Println("autodeploy", version)
+		fmt.Println("deploy_site", version)
 		return
 
 	case "--help", "-h":

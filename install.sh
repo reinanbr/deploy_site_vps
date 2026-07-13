@@ -1,0 +1,205 @@
+#!/bin/sh
+# deploy_site installer
+# Usage:
+#   Install:   curl -fsSL https://raw.githubusercontent.com/reinanbr/deploy_site/main/install.sh | sh
+#   Uninstall: curl -fsSL https://raw.githubusercontent.com/reinanbr/deploy_site/main/install.sh | sh -s -- uninstall
+
+set -e
+
+REPO="reinanbr/deploy_site"
+BINARY="deploy_site"
+INSTALL_DIR="/usr/local/bin"
+MODULE_BIN="$(printf "%s" "$REPO" | awk -F/ '{print $NF}')"
+
+# ─── helpers ───────────────────────────────────────────────
+
+info()  { printf '\033[1;34m::\033[0m %s\n' "$*"; }
+ok()    { printf '\033[1;32m[OK]\033[0m %s\n' "$*"; }
+warn()  { printf '\033[1;33m[WARN]\033[0m %s\n' "$*"; }
+die()   { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; exit 1; }
+
+need() {
+    command -v "$1" >/dev/null 2>&1 || die "'$1' is required but not found on PATH"
+}
+
+ACTION="install"
+if [ "$#" -gt 0 ]; then
+    case "$1" in
+        uninstall|--uninstall|remove)
+            ACTION="uninstall"
+            ;;
+        --help|-h)
+            cat <<EOF
+deploy_site installer
+
+Install:
+  curl -fsSL https://raw.githubusercontent.com/${REPO}/main/install.sh | sh
+
+Uninstall:
+  curl -fsSL https://raw.githubusercontent.com/${REPO}/main/install.sh | sh -s -- uninstall
+EOF
+            exit 0
+            ;;
+    esac
+fi
+
+# ─── checks ────────────────────────────────────────────────
+
+if [ "$ACTION" = "install" ]; then
+    need curl
+elif [ "$ACTION" != "uninstall" ]; then
+    die "Unknown action: $1 (use 'uninstall' or no arg)"
+fi
+
+# ─── uninstall path ─────────────────────────────────────────
+
+if [ "$ACTION" = "uninstall" ]; then
+    TARGET="${INSTALL_DIR}/${BINARY}"
+    info "Removing ${TARGET}..."
+    if [ -e "$TARGET" ]; then
+        if [ -w "$INSTALL_DIR" ]; then
+            rm -f "$TARGET"
+        else
+            sudo rm -f "$TARGET"
+        fi
+        ok "Removed ${TARGET}"
+    else
+        warn "Binary not found at ${TARGET}"
+    fi
+
+    printf '\n'
+    info "Uninstall complete"
+    info "Note: nginx sites, certificates and any 'deploy_site service install' systemd timer were left untouched."
+    exit 0
+fi
+
+# ─── detect OS / arch ──────────────────────────────────────
+
+if [ "$ACTION" = "install" ]; then
+    OS="$(uname -s)"
+    ARCH="$(uname -m)"
+
+    case "$OS" in
+        Linux)  os="linux" ;;
+        Darwin) os="darwin" ;;
+        *)      die "Unsupported OS: $OS" ;;
+    esac
+
+    case "$ARCH" in
+        x86_64)          arch="amd64" ;;
+        aarch64|arm64)   arch="arm64" ;;
+        *)               die "Unsupported architecture: $ARCH" ;;
+    esac
+fi
+
+# ─── resolve latest version ────────────────────────────────
+
+if [ "$ACTION" = "install" ]; then
+    info "Fetching latest release..."
+
+    VERSION="$(
+        curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
+        | grep '"tag_name"' \
+        | sed 's/.*"tag_name": *"\(.*\)".*/\1/'
+    )"
+
+    # fallback: use latest tag if no GitHub release exists yet
+    if [ -z "$VERSION" ] && command -v git >/dev/null 2>&1; then
+        VERSION="$(
+            git ls-remote --tags --sort=-v:refname \
+                "https://github.com/${REPO}.git" \
+            | grep -oE 'refs/tags/v[0-9]+\.[0-9]+\.[0-9]+' \
+            | head -1 \
+            | sed 's|refs/tags/||'
+        )"
+    fi
+
+    [ -z "$VERSION" ] && die "Could not determine latest version"
+
+    ok "Latest version: $VERSION"
+fi
+
+# ─── download ──────────────────────────────────────────────
+
+cleanup_tmp() {
+    if [ -n "$TMP" ] && [ -f "$TMP" ]; then
+        rm -f "$TMP"
+    fi
+}
+
+TMP=""
+trap cleanup_tmp EXIT
+
+if [ "$ACTION" = "install" ]; then
+    FILENAME="${BINARY}_${os}_${arch}"
+    URL="https://github.com/${REPO}/releases/download/${VERSION}/${FILENAME}"
+
+    TMP="$(mktemp)"
+
+    info "Downloading ${FILENAME} (${VERSION})..."
+    if ! curl -fsSL --progress-bar "$URL" -o "$TMP"; then
+        warn "Download failed — checking for local build fallback"
+        rm -f "$TMP"
+        TMP=""
+        if command -v go >/dev/null 2>&1; then
+            info "Building from source via go install (requires Go)"
+            GO_BIN="$(go env GOBIN)"
+            if [ -z "$GO_BIN" ]; then
+                GO_BIN="$(go env GOPATH)/bin"
+            fi
+
+            GO111MODULE=on go install "github.com/reinanbr/deploy_site@${VERSION}" \
+                || die "go install failed; please install Go 1.21+ or provide a release binary"
+
+            for candidate in "${GO_BIN}/${BINARY}" "${GO_BIN}/${MODULE_BIN}"; do
+                if [ -f "$candidate" ]; then
+                    TMP="$candidate"
+                    break
+                fi
+            done
+
+            [ -n "$TMP" ] || die "go install succeeded but no binary found at ${GO_BIN}/${BINARY} or ${GO_BIN}/${MODULE_BIN}"
+            ok "Built from source at ${TMP}"
+        else
+            die "Download failed and Go is not available to build from source:\n  ${URL}"
+        fi
+    fi
+
+    chmod +x "$TMP"
+
+    # ─── install ───────────────────────────────────────────────
+
+    info "Installing to ${INSTALL_DIR}/${BINARY}..."
+
+    if [ -w "$INSTALL_DIR" ]; then
+        mv "$TMP" "${INSTALL_DIR}/${BINARY}"
+    else
+        sudo mv "$TMP" "${INSTALL_DIR}/${BINARY}"
+    fi
+
+    # ─── verify ────────────────────────────────────────────────
+
+    if ! command -v "$BINARY" >/dev/null 2>&1; then
+        die "Install succeeded but '${BINARY}' is not on PATH. Add ${INSTALL_DIR} to your PATH."
+    fi
+
+    ok "Installed: $(command -v "$BINARY")"
+    ok "Version  : $("$BINARY" --version)"
+
+    # ─── next steps ────────────────────────────────────────────
+
+    printf '\n'
+    info "Requires on this VPS: docker (with the compose plugin), nginx, certbot"
+    info "  apt install -y docker.io docker-compose-plugin nginx certbot python3-certbot-dns-cloudflare"
+    printf '\n'
+    info "Next steps:"
+    printf '    cd /path/to/your/docker-compose/project\n'
+    printf '    deploy_site init        # create config_deploy_site.json\n'
+    printf '    deploy_site dry-run     # validate tooling, DNS, tokens\n'
+    printf '    deploy_site deploy      # compose up + nginx + certbot\n'
+    printf '\n'
+    printf '  Cloudflare API token (zone:DNS:edit) for the dns-cloudflare challenge:\n'
+    printf "    echo 'CLOUDFLARE_API_TOKEN=xxxx' >> .env\n"
+    printf "    echo '.env' >> .gitignore\n"
+    printf '\n'
+fi

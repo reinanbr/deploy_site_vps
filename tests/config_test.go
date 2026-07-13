@@ -7,15 +7,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/reinanbr/auto_deploy_go/autodeploy"
+	"github.com/reinanbr/deploy_site/autodeploy"
 )
 
 // ─── ResolveConfigPath ───────────────────────
 
 func TestResolveConfigPath_EmptyUsesDefault(t *testing.T) {
 	got := autodeploy.ResolveConfigPath("")
-	if !strings.HasSuffix(got, "config_auto_deploy.json") {
-		t.Errorf("got %q, want suffix config_auto_deploy.json", got)
+	if !strings.HasSuffix(got, "config_deploy_site.json") {
+		t.Errorf("got %q, want suffix config_deploy_site.json", got)
 	}
 }
 
@@ -56,9 +56,9 @@ func TestLoadDotEnvToken_CLOUDFLARE_API_TOKEN(t *testing.T) {
 	}
 }
 
-func TestLoadDotEnvToken_AUTODEPLOY_CLOUDFLARE_TOKEN(t *testing.T) {
+func TestLoadDotEnvToken_DEPLOY_SITE_CLOUDFLARE_TOKEN(t *testing.T) {
 	dir := t.TempDir()
-	writeEnvFile(t, dir, "AUTODEPLOY_CLOUDFLARE_TOKEN=alt\n")
+	writeEnvFile(t, dir, "DEPLOY_SITE_CLOUDFLARE_TOKEN=alt\n")
 	got := autodeploy.LoadDotEnvToken(dir)
 	if got != "alt" {
 		t.Errorf("got %q, want %q", got, "alt")
@@ -76,7 +76,7 @@ func TestLoadDotEnvToken_QuotedValue(t *testing.T) {
 
 func TestLoadDotEnvToken_CommentsIgnored(t *testing.T) {
 	dir := t.TempDir()
-	writeEnvFile(t, dir, "# CLOUDFLARE_API_TOKEN=nope\nAUTODEPLOY_CLOUDFLARE_TOKEN=real\n")
+	writeEnvFile(t, dir, "# CLOUDFLARE_API_TOKEN=nope\nDEPLOY_SITE_CLOUDFLARE_TOKEN=real\n")
 	got := autodeploy.LoadDotEnvToken(dir)
 	if got != "real" {
 		t.Errorf("got %q, want %q", got, "real")
@@ -113,16 +113,16 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	if cfg.ClientMaxBodySize != "10m" {
 		t.Errorf("ClientMaxBodySize = %q, want 10m", cfg.ClientMaxBodySize)
 	}
-	if cfg.LogFile != "auto_deploy.log" {
-		t.Errorf("LogFile = %q, want auto_deploy.log", cfg.LogFile)
+	if cfg.LogFile != "deploy_site.log" {
+		t.Errorf("LogFile = %q, want deploy_site.log", cfg.LogFile)
 	}
 }
 
 func TestLoadConfig_CustomValues(t *testing.T) {
 	dir := t.TempDir()
 	path := writeConfig(t, dir, map[string]any{
-		"domain":          "app.example.com",
-		"upstream_port":   9090,
+		"domain":           "app.example.com",
+		"upstream_port":    9090,
 		"challenge_method": "http",
 	})
 	cfg, err := autodeploy.LoadConfig(path)
@@ -202,7 +202,7 @@ func writeConfig(t *testing.T, dir string, content map[string]any) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(dir, "config_auto_deploy.json")
+	path := filepath.Join(dir, "config_deploy_site.json")
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		t.Fatal(err)
 	}

@@ -37,7 +37,7 @@ func runCertbot(args ...string) (string, error) {
 // certbot's dns-cloudflare plugin. The caller must invoke the returned
 // cleanup function once certbot has finished.
 func writeCloudflareCredentials(token string) (string, func(), error) {
-	f, err := os.CreateTemp("", "autodeploy-cloudflare-*.ini")
+	f, err := os.CreateTemp("", "deploy_site-cloudflare-*.ini")
 	if err != nil {
 		return "", func() {}, err
 	}

@@ -1,3 +1,3 @@
-module github.com/reinanbr/auto_deploy_go
+module github.com/reinanbr/deploy_site
 
 go 1.21

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/reinanbr/auto_deploy_go/autodeploy"
+	"github.com/reinanbr/deploy_site/autodeploy"
 )
 
 func testConfig(t *testing.T, domain string) *autodeploy.Config {
@@ -21,13 +21,13 @@ func testConfig(t *testing.T, domain string) *autodeploy.Config {
 		t.Fatal(err)
 	}
 	return &autodeploy.Config{
-		Domain:               domain,
-		UpstreamHost:         "127.0.0.1",
-		UpstreamPort:         8080,
-		NginxSitesAvailable:  available,
-		NginxSitesEnabled:    enabled,
-		ClientMaxBodySize:    "10m",
-		ForceSSLRedirect:     true,
+		Domain:              domain,
+		UpstreamHost:        "127.0.0.1",
+		UpstreamPort:        8080,
+		NginxSitesAvailable: available,
+		NginxSitesEnabled:   enabled,
+		ClientMaxBodySize:   "10m",
+		ForceSSLRedirect:    true,
 	}
 }
 

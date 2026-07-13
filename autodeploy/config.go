@@ -27,7 +27,7 @@ type Config struct {
 	LogFile                      string `json:"log_file"`
 
 	// CloudflareToken is intentionally excluded from JSON serialization.
-	// Set via CLOUDFLARE_API_TOKEN (or AUTODEPLOY_CLOUDFLARE_TOKEN) env var,
+	// Set via CLOUDFLARE_API_TOKEN (or DEPLOY_SITE_CLOUDFLARE_TOKEN) env var,
 	// or a .env file in compose_workdir.
 	CloudflareToken string `json:"-"`
 }
@@ -70,7 +70,7 @@ func LoadDotEnvToken(baseDir string) string {
 		}
 		key := strings.TrimSpace(parts[0])
 		val := strings.Trim(strings.TrimSpace(parts[1]), `"'`)
-		if key == "CLOUDFLARE_API_TOKEN" || key == "AUTODEPLOY_CLOUDFLARE_TOKEN" {
+		if key == "CLOUDFLARE_API_TOKEN" || key == "DEPLOY_SITE_CLOUDFLARE_TOKEN" {
 			return val
 		}
 	}
@@ -84,7 +84,7 @@ func tokenFromEnv() string {
 	if v := os.Getenv("CLOUDFLARE_API_TOKEN"); v != "" {
 		return v
 	}
-	if v := os.Getenv("AUTODEPLOY_CLOUDFLARE_TOKEN"); v != "" {
+	if v := os.Getenv("DEPLOY_SITE_CLOUDFLARE_TOKEN"); v != "" {
 		return v
 	}
 	return ""
@@ -92,7 +92,7 @@ func tokenFromEnv() string {
 
 func ResolveConfigPath(p string) string {
 	if p == "" {
-		p = "config_auto_deploy.json"
+		p = "config_deploy_site.json"
 	}
 	if abs, err := filepath.Abs(p); err == nil {
 		return abs
@@ -112,7 +112,7 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if _, hasToken := raw["cloudflare_api_token"]; hasToken {
 		return nil, fmt.Errorf(
-			"'cloudflare_api_token' must not be set in config_auto_deploy.json — " +
+			"'cloudflare_api_token' must not be set in config_deploy_site.json — " +
 				"use CLOUDFLARE_API_TOKEN in a .env file or environment variable instead",
 		)
 	}
@@ -160,7 +160,7 @@ func LoadConfig(path string) (*Config, error) {
 		cfg.ClientMaxBodySize = "10m"
 	}
 	if cfg.LogFile == "" {
-		cfg.LogFile = "auto_deploy.log"
+		cfg.LogFile = "deploy_site.log"
 	}
 
 	// token resolution: env var → .env file in compose workdir → empty

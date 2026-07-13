@@ -58,7 +58,7 @@ func RotateIfLarge(path string, maxBytes int64) error {
 
 func getLogMaxBytes() int64 {
 	const defaultSize = int64(5 * 1024 * 1024) // 5 MB
-	raw := os.Getenv("AUTODEPLOY_LOG_MAX_BYTES")
+	raw := os.Getenv("DEPLOY_SITE_LOG_MAX_BYTES")
 	if raw == "" {
 		return defaultSize
 	}

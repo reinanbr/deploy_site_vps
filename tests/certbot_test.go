@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reinanbr/auto_deploy_go/autodeploy"
+	"github.com/reinanbr/deploy_site/autodeploy"
 )
 
 func TestObtainCertificate_RequiresCloudflareToken(t *testing.T) {
