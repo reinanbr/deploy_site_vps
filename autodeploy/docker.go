@@ -12,7 +12,10 @@ import (
 	"time"
 )
 
-const dockerTimeout = 5 * time.Minute
+const (
+	dockerTimeout      = 5 * time.Minute
+	dockerQuickTimeout = 30 * time.Second
+)
 
 func composeArgs(cfg *Config) []string {
 	args := []string{"compose"}
@@ -46,6 +49,23 @@ func runDocker(dir string, args ...string) (string, error) {
 	return out, err
 }
 
+// runDockerQuiet runs a fast, informational docker command (status checks)
+// without teeing to stdout — the caller formats and prints the result itself,
+// so streaming it live here would just print it twice.
+func runDockerQuiet(dir string, args ...string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dockerQuickTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "docker", args...)
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+
+	if ctx.Err() == context.DeadlineExceeded {
+		return strings.TrimSpace(string(out)), fmt.Errorf("docker command timed out after %s", dockerQuickTimeout)
+	}
+	return strings.TrimSpace(string(out)), err
+}
+
 // DockerAvailable checks that the docker CLI (with the compose plugin) is on PATH.
 func DockerAvailable() error {
 	if _, err := exec.LookPath("docker"); err != nil {
@@ -77,9 +97,32 @@ func ComposeUp(workdir string, cfg *Config) (string, error) {
 	return runDocker(workdir, args...)
 }
 
+// ComposeRunning reports whether the stack (or the configured service, if
+// set) currently has any running containers.
+func ComposeRunning(workdir string, cfg *Config) (bool, error) {
+	args := composeArgs(cfg)
+	args = append(args, "ps", "-q")
+	if cfg.ComposeService != "" {
+		args = append(args, cfg.ComposeService)
+	}
+	out, err := runDockerQuiet(workdir, args...)
+	if err != nil {
+		return false, fmt.Errorf("docker compose ps failed: %w (%s)", err, out)
+	}
+	return out != "", nil
+}
+
+// ComposeDown stops and removes the stack's containers, networks and
+// anonymous volumes.
+func ComposeDown(workdir string, cfg *Config) (string, error) {
+	args := composeArgs(cfg)
+	args = append(args, "down")
+	return runDocker(workdir, args...)
+}
+
 // ComposePs reports the status of the stack's containers.
 func ComposePs(workdir string, cfg *Config) (string, error) {
 	args := composeArgs(cfg)
 	args = append(args, "ps")
-	return runDocker(workdir, args...)
+	return runDockerQuiet(workdir, args...)
 }

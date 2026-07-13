@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.1.2
+
+- `deploy` now detects an already-running stack (`docker compose ps -q`) and
+  runs `docker compose down` before `up -d --build`, instead of building on
+  top of containers that may already be up.
+- Fixed a regression from v0.1.1: `status` was streaming `docker compose ps`
+  output live and then reprinting it, showing it twice. `ComposePs` is back
+  to a quiet (non-streamed) call since `status` formats and prints it itself.
+
 ## v0.1.1
 
 - `deploy`/`renew` now stream `docker compose` and `certbot` output live to

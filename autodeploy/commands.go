@@ -147,6 +147,21 @@ func CmdDeploy(cfgPath string) error {
 		return err
 	}
 
+	if running, err := ComposeRunning(workdir, cfg); err != nil {
+		l.warn(fmt.Sprintf("could not check for running containers: %v", err))
+	} else if running {
+		l.info("containers already running — running docker compose down first")
+		out, err := ComposeDown(workdir, cfg)
+		if out != "" {
+			l.raw(out)
+		}
+		if err != nil {
+			l.errLog(fmt.Sprintf("docker compose down failed: %v", err))
+			return fmt.Errorf("docker compose down failed: %w", err)
+		}
+		l.ok("stack stopped")
+	}
+
 	l.info("running docker compose up -d --build")
 	out, err := ComposeUp(workdir, cfg)
 	if out != "" {

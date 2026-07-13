@@ -7,7 +7,7 @@ import (
 	"github.com/reinanbr/deploy_site/autodeploy"
 )
 
-var version = "v0.1.1"
+var version = "v0.1.2"
 
 const usage = `Usage: deploy_site <command> [config_path]
 
