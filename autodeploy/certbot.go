@@ -1,8 +1,10 @@
 package autodeploy
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
@@ -20,17 +22,27 @@ func CertbotAvailable() error {
 	return nil
 }
 
+// runCertbot streams the command's combined output to stdout live (so a slow
+// DNS propagation wait or challenge shows progress instead of appearing to
+// hang) while also buffering it to return to the caller for logging.
 func runCertbot(args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), certbotTimeout)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "certbot", args...)
-	out, err := cmd.CombinedOutput()
+
+	var buf bytes.Buffer
+	tee := io.MultiWriter(os.Stdout, &buf)
+	cmd.Stdout = tee
+	cmd.Stderr = tee
+
+	err := cmd.Run()
+	out := strings.TrimSpace(buf.String())
 
 	if ctx.Err() == context.DeadlineExceeded {
-		return strings.TrimSpace(string(out)), fmt.Errorf("certbot timed out after %s", certbotTimeout)
+		return out, fmt.Errorf("certbot timed out after %s", certbotTimeout)
 	}
-	return strings.TrimSpace(string(out)), err
+	return out, err
 }
 
 // writeCloudflareCredentials writes a temporary, 0600 credentials file for

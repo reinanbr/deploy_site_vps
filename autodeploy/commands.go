@@ -150,7 +150,7 @@ func CmdDeploy(cfgPath string) error {
 	l.info("running docker compose up -d --build")
 	out, err := ComposeUp(workdir, cfg)
 	if out != "" {
-		l.info(out)
+		l.raw(out)
 	}
 	if err != nil {
 		l.errLog(fmt.Sprintf("docker compose up failed: %v", err))
@@ -171,7 +171,7 @@ func CmdDeploy(cfgPath string) error {
 		l.info(fmt.Sprintf("requesting certificate via %s", cfg.ChallengeMethod))
 		out, err := ObtainCertificate(cfg)
 		if out != "" {
-			l.info(out)
+			l.raw(out)
 		}
 		if err != nil {
 			l.errLog(fmt.Sprintf("certbot failed: %v", err))
@@ -234,7 +234,7 @@ func CmdRenew(cfgPath string) error {
 	l.info("running certbot renew")
 	out, err := RenewAll()
 	if out != "" {
-		l.info(out)
+		l.raw(out)
 	}
 	if err != nil {
 		l.errLog(fmt.Sprintf("certbot renew failed: %v", err))

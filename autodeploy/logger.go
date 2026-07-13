@@ -40,6 +40,15 @@ func (l *logger) warn(msg string)   { l.log("WARN ", msg) }
 func (l *logger) errLog(msg string) { l.log("ERROR", msg) }
 func (l *logger) close()            { l.file.Close() }
 
+// raw persists msg to the log file only. Used for subprocess output that was
+// already streamed to stdout live as it happened, so it isn't printed twice.
+func (l *logger) raw(msg string) {
+	if msg == "" {
+		return
+	}
+	l.logger.Println(msg)
+}
+
 func RotateIfLarge(path string, maxBytes int64) error {
 	info, err := os.Stat(path)
 	if err != nil {

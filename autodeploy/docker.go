@@ -1,8 +1,10 @@
 package autodeploy
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,18 +22,28 @@ func composeArgs(cfg *Config) []string {
 	return args
 }
 
+// runDocker streams the command's combined output to stdout live (so long
+// builds show progress instead of appearing to hang) while also buffering it
+// to return to the caller for logging.
 func runDocker(dir string, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), dockerTimeout)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Dir = dir
-	out, err := cmd.CombinedOutput()
+
+	var buf bytes.Buffer
+	tee := io.MultiWriter(os.Stdout, &buf)
+	cmd.Stdout = tee
+	cmd.Stderr = tee
+
+	err := cmd.Run()
+	out := strings.TrimSpace(buf.String())
 
 	if ctx.Err() == context.DeadlineExceeded {
-		return strings.TrimSpace(string(out)), fmt.Errorf("docker command timed out after %s", dockerTimeout)
+		return out, fmt.Errorf("docker command timed out after %s", dockerTimeout)
 	}
-	return strings.TrimSpace(string(out)), err
+	return out, err
 }
 
 // DockerAvailable checks that the docker CLI (with the compose plugin) is on PATH.
