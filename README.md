@@ -149,8 +149,32 @@ echo '.env' >> .gitignore
 Resolution order: `CLOUDFLARE_API_TOKEN` → `DEPLOY_SITE_CLOUDFLARE_TOKEN` → `.env` next to the config.
 Tokens set in `config_deploy_site.json` are rejected at startup.
 
-Create the token at **Cloudflare dashboard → My Profile → API Tokens → Create Token → Edit zone DNS**,
-scoped to the specific zone.
+### Why the token is needed even if the domain is already configured
+
+Already pointing the domain's DNS record at the VPS is not enough for the `dns-cloudflare`
+challenge. That record (A/CNAME) only controls where traffic goes — Let's Encrypt still needs
+proof that you control the zone before issuing a certificate. `certbot`'s `dns-cloudflare` plugin
+does that by creating a temporary `TXT` record via the Cloudflare API (the DNS-01 challenge), then
+deleting it once validated. The token is what authorizes certbot to create/delete that record —
+it's required on every issuance and renewal, independent of your existing DNS setup.
+
+If you'd rather not hand out a Cloudflare token at all, switch `challenge_method` to `"http"` in
+the config — no token needed, but the domain must be DNS-only (not proxied) and port 80 reachable
+from the internet. See [Choosing a challenge method](#choosing-a-challenge-method).
+
+### Required token permissions (policies)
+
+Create the token at **Cloudflare dashboard → My Profile → API Tokens → Create Token**. Use the
+**"Edit zone DNS"** template, or build a custom token with exactly:
+
+| Setting | Value |
+|---|---|
+| Permissions | `Zone` → `DNS` → `Edit` (includes read access to DNS records) |
+| Zone Resources | `Include` → `Specific zone` → your domain |
+
+That single permission, scoped to that one zone, is all `certbot-dns-cloudflare` needs to create
+and remove the challenge `TXT` record. Do **not** use the legacy **Global API Key** — it grants
+full account access instead of being scoped to one zone and one permission.
 
 ---
 
