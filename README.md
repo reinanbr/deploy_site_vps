@@ -1,16 +1,16 @@
 # deploy_site
 
-[![CI](https://github.com/reinanbr/deploy_site/actions/workflows/ci.yml/badge.svg)](https://github.com/reinanbr/deploy_site/actions/workflows/ci.yml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/reinanbr/deploy_site.svg)](https://pkg.go.dev/github.com/reinanbr/deploy_site)
-[![Go Report Card](https://goreportcard.com/badge/github.com/reinanbr/deploy_site)](https://goreportcard.com/report/github.com/reinanbr/deploy_site)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/reinanbr/deploy_site)](go.mod)
-[![Release](https://img.shields.io/github/v/release/reinanbr/deploy_site?sort=semver)](https://github.com/reinanbr/deploy_site/releases)
+[![CI](https://github.com/reinanbr/deploy_site_vps/actions/workflows/ci.yml/badge.svg)](https://github.com/reinanbr/deploy_site_vps/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/reinanbr/deploy_site_vps.svg)](https://pkg.go.dev/github.com/reinanbr/deploy_site_vps)
+[![Go Report Card](https://goreportcard.com/badge/github.com/reinanbr/deploy_site_vps)](https://goreportcard.com/report/github.com/reinanbr/deploy_site_vps)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/reinanbr/deploy_site_vps)](go.mod)
+[![Release](https://img.shields.io/github/v/release/reinanbr/deploy_site_vps?sort=semver)](https://github.com/reinanbr/deploy_site_vps/releases)
 [![Platform](https://img.shields.io/badge/platform-linux-informational?logo=linux&logoColor=white)](README.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Deploys a Docker Compose project on a VPS behind Nginx with a Let's Encrypt certificate — for a domain whose DNS already lives in Cloudflare.
 
-`deploy_site deploy` does, in order: `docker compose up -d --build`, generate and install an Nginx vhost, request a TLS certificate via certbot, and reload Nginx.
+`deploy_site_vps deploy` does, in order: `docker compose up -d --build`, generate and install an Nginx vhost, request a TLS certificate via certbot, and reload Nginx.
 
 Pure Go · zero dependencies · Linux · systemd-ready
 
@@ -36,7 +36,7 @@ Cloudflare (DNS, proxy optional) ──▶ VPS:80/443 ──▶ Nginx ──▶ 
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/reinanbr/deploy_site/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/reinanbr/deploy_site_vps/main/install.sh | sh
 ```
 
 Requires on the VPS: `docker` (with the compose plugin), `nginx`, `certbot`, and, for the default
@@ -49,7 +49,7 @@ sudo apt install -y docker.io docker-compose-plugin nginx certbot python3-certbo
 Build from source (Go 1.21+):
 
 ```bash
-go build -o deploy_site .
+go build -o deploy_site_vps .
 ```
 
 Run tests:
@@ -64,7 +64,7 @@ go test ./...
 
 ```bash
 cd /path/to/your/docker-compose/project
-deploy_site init        # generates config_deploy_site.json
+deploy_site_vps init        # generates config_deploy_site.json
 ```
 
 Edit `config_deploy_site.json`: set `domain`, `upstream_port` (the port your container publishes
@@ -81,8 +81,8 @@ echo '.env' >> .gitignore
 Then:
 
 ```bash
-deploy_site dry-run      # validate tooling, config, DNS, token — no changes made
-deploy_site deploy       # compose up, nginx vhost, certbot, reload
+deploy_site_vps dry-run      # validate tooling, config, DNS, token — no changes made
+deploy_site_vps deploy       # compose up, nginx vhost, certbot, reload
 ```
 
 Your app is now served at `https://<domain>`.
@@ -91,7 +91,7 @@ Your app is now served at `https://<domain>`.
 
 ## Configuration
 
-`deploy_site init` creates `config_deploy_site.json` next to your compose file.
+`deploy_site_vps init` creates `config_deploy_site.json` next to your compose file.
 
 ```json
 {
@@ -109,7 +109,7 @@ Your app is now served at `https://<domain>`.
   "client_max_body_size": "10m",
   "force_ssl_redirect": true,
   "extra_nginx_directives": "",
-  "log_file": "deploy_site.log"
+  "log_file": "deploy_site_vps.log"
 }
 ```
 
@@ -128,7 +128,7 @@ Your app is now served at `https://<domain>`.
 | `client_max_body_size` | `10m` | Nginx upload size cap |
 | `force_ssl_redirect` | `true` | Redirect HTTP → HTTPS instead of also serving plain HTTP |
 | `extra_nginx_directives` | — | Raw directives injected into the HTTPS `server` block |
-| `log_file` | `deploy_site.log` | Log file for `deploy`/`renew` |
+| `log_file` | `deploy_site_vps.log` | Log file for `deploy`/`renew` |
 
 **`cloudflare_api_token` is not a valid field.** Tokens belong in the environment.
 
@@ -158,7 +158,7 @@ scoped to the specific zone.
 ## Usage
 
 ```
-deploy_site <command> [config_path]
+deploy_site_vps <command> [config_path]
 ```
 
 | Command | Description |
@@ -176,8 +176,8 @@ deploy_site <command> [config_path]
 Config path can be passed as the last argument to any command:
 
 ```bash
-deploy_site deploy /etc/deploy_site/config_deploy_site.json
-deploy_site status /etc/deploy_site/config_deploy_site.json
+deploy_site_vps deploy /etc/deploy_site_vps/config_deploy_site.json
+deploy_site_vps status /etc/deploy_site_vps/config_deploy_site.json
 ```
 
 ### What `deploy` actually does
@@ -197,22 +197,22 @@ skips certificate issuance if one already exists (use `renew` for that).
 
 ### Automatic renewal
 
-Let's Encrypt certificates last 90 days. Install a systemd timer that runs `deploy_site renew`
+Let's Encrypt certificates last 90 days. Install a systemd timer that runs `deploy_site_vps renew`
 twice a day (a no-op unless renewal is actually due):
 
 ```bash
-sudo deploy_site service install /etc/deploy_site/config_deploy_site.json
+sudo deploy_site_vps service install /etc/deploy_site_vps/config_deploy_site.json
 
-deploy_site service status
-deploy_site service logs 100
-sudo deploy_site service stop
-sudo deploy_site service uninstall
+deploy_site_vps service status
+deploy_site_vps service logs 100
+sudo deploy_site_vps service stop
+sudo deploy_site_vps service uninstall
 ```
 
 Or wire it into cron yourself:
 
 ```cron
-0 3,15 * * * /usr/local/bin/deploy_site renew /etc/deploy_site/config_deploy_site.json
+0 3,15 * * * /usr/local/bin/deploy_site_vps renew /etc/deploy_site_vps/config_deploy_site.json
 ```
 
 `service` subcommands are Linux-only and generally require root.
@@ -229,7 +229,7 @@ Or wire it into cron yourself:
 | Also issues wildcard certs | ✅ | ❌ |
 
 If the domain is proxied through Cloudflare, `dns-cloudflare` is the safer default and is what
-`deploy_site init` scaffolds. Switch `challenge_method` to `"http"` only for domains kept
+`deploy_site_vps init` scaffolds. Switch `challenge_method` to `"http"` only for domains kept
 DNS-only, or where you'd rather not hand certbot an API token.
 
 ---
@@ -239,7 +239,7 @@ DNS-only, or where you'd rather not hand certbot an API token.
 - `nginx_sites_available` / `nginx_sites_enabled` default to the Debian/Ubuntu layout
   (`/etc/nginx/sites-available` symlinked into `/etc/nginx/sites-enabled`).
 - On distros that use a single `conf.d`/`vhost.d` directory (no separate available/enabled split),
-  set both fields to the same path — `deploy_site` skips the symlink step when they're equal.
+  set both fields to the same path — `deploy_site_vps` skips the symlink step when they're equal.
 - `extra_nginx_directives` is injected verbatim into the HTTPS `server` block — useful for
   `proxy_read_timeout`, custom headers, rate limiting, etc.
 
@@ -251,16 +251,16 @@ DNS-only, or where you'd rather not hand certbot an API token.
 |---|---|
 | `<nginx_sites_available>/<domain>.conf` | The generated vhost |
 | `/etc/letsencrypt/live/<domain>/` | Certificate and key (managed by certbot) |
-| `deploy_site.log` | Log for `deploy`/`renew` (path set by `log_file`) |
+| `deploy_site_vps.log` | Log for `deploy`/`renew` (path set by `log_file`) |
 
 ---
 
 ## Development
 
-Project layout (Go 1.21+, module `github.com/reinanbr/deploy_site`):
+Project layout (Go 1.21+, module `github.com/reinanbr/deploy_site_vps`):
 
 ```
-deploy_site/
+deploy_site_vps/
 ├── main.go              — CLI entry point and command routing
 ├── autodeploy/           — core package (package autodeploy)
 │   ├── config.go        — Config type, LoadConfig, Cloudflare token resolution
@@ -279,7 +279,7 @@ deploy_site/
 Build:
 
 ```bash
-go build -o deploy_site .
+go build -o deploy_site_vps .
 ```
 
 Test:
